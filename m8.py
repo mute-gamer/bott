@@ -5,7 +5,7 @@ import requests
 import re
 import threading
 import schedule
-import praw  # Reddit API Library
+import praw  # اضافه کردن PRAW برای ارسال پست به Reddit
 from telegram import Bot
 from flask import Flask
 import os
@@ -17,32 +17,32 @@ TELEGRAM_BOT_TOKEN = "7817464511:AAFvpS58HxWAreM6uzhEVC_WHSj-qUdE4zw"
 TELEGRAM_CHAT_ID = "-1002310803321"
 CHANNEL_ID = "UC4mvivsBEX3Mq7us5U4lb7w"
 
-# Reddit API Config
+# Reddit Config
 REDDIT_CLIENT_ID = "vWjAJs-aDw0zhOFBh_aH8A"
 REDDIT_CLIENT_SECRET = "f8k6Cy88rAU-8HfjWPD5wl4ZTd5NuA"
 REDDIT_USERNAME = "mute031gamer@gmail.com"
 REDDIT_PASSWORD = "20051384-Vajra"
-USER_AGENT = "script:youtube_poster:v1.0 (by /u/Mute-Gamer)"
-SUBREDDITS = ["gaming", "pcgaming", "gamers", "truegaming", "IndieGaming"]
+REDDIT_USER_AGENT = "YouTube_AutoPost"
+SUBREDDITS = ["gaming", "pcgaming", "gamingvideos"]  # ساب‌ردیت‌های مرتبط با گیمینگ
 
 bot = Bot(token=TELEGRAM_BOT_TOKEN)
 last_post_id = None
 last_video_id = None
 
-# Reddit Login
+# تنظیمات اتصال به Reddit
 reddit = praw.Reddit(
     client_id=REDDIT_CLIENT_ID,
     client_secret=REDDIT_CLIENT_SECRET,
     username=REDDIT_USERNAME,
     password=REDDIT_PASSWORD,
-    user_agent=USER_AGENT
+    user_agent=REDDIT_USER_AGENT
 )
 
 def post_to_reddit(title, url):
     try:
-        subreddit = random.choice(SUBREDDITS)  # انتخاب تصادفی یک ساب‌ردیت
+        subreddit = random.choice(SUBREDDITS)
         reddit.subreddit(subreddit).submit(title, url=url)
-        print(f"✅ Posted to Reddit: {subreddit}")
+        print(f"✅ Successfully posted to r/{subreddit}")
     except Exception as e:
         print(f"⚠️ Error posting to Reddit: {e}")
 
@@ -66,12 +66,17 @@ async def get_latest_video():
             if video_id != last_video_id:
                 last_video_id = video_id
                 await send_telegram_message(f"🎥 New Video Uploaded!\n\n🚀 <a href='{video_url}'>Watch Now</a>")
-                post_to_reddit("Check out this awesome gaming video!", video_url)
+                post_to_reddit("Check out my new gaming video!", video_url)
 
-def check_updates():
+async def check_updates():
     while True:
-        asyncio.run(get_latest_video())
-        time.sleep(30)  # هر ۳۰ ثانیه چک کنه
+        await get_latest_video()
+        await asyncio.sleep(30)  # هر ۳۰ ثانیه چک می‌کند
+
+async def main():
+    asyncio.create_task(check_updates())
+    while True:
+        await asyncio.sleep(1)
 
 app = Flask(__name__)
 @app.route('/')
@@ -83,7 +88,4 @@ def run_flask():
 
 if __name__ == "__main__":
     threading.Thread(target=run_flask, daemon=True).start()
-    threading.Thread(target=check_updates, daemon=True).start()
-    while True:
-        schedule.run_pending()
-        time.sleep(1)
+    asyncio.run(main())
